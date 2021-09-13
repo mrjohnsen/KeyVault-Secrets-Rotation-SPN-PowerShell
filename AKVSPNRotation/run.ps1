@@ -68,7 +68,7 @@ function RoatateSecret($keyVaultName,$secretName,$secretVersion){
     #Add new credential to Key Vault
     $newSecretVersionTags = @{}
     $newSecretVersionTags.ValidityPeriodDays = $validityPeriodDays
-    $newSecretVersionTags.CredentialId=$alternateCredentialId
+    $newSecretVersionTags.CredentialId=$CredentialId
     $newSecretVersionTags.ProviderAddress = $providerAddress
 
     $expiryDate = (Get-Date).AddDays([int]$validityPeriodDays).ToUniversalTime()
@@ -77,7 +77,7 @@ function RoatateSecret($keyVaultName,$secretName,$secretVersion){
 
     Write-Host "New credential added to Key Vault. Secret Name: $secretName"
 
-    New-AzADAppCredential -ObjectId $credentialId -Password $secretvalue -startDate $(get-date) -EndDate $expiryDate
+    New-AzADAppCredential -ObjectId $providerAddress -Password $secretvalue -startDate $(get-date) -EndDate $expiryDate
 }
 $ErrorActionPreference = "Stop"
 # Make sure to pass hashtables to Out-String so they're logged correctly
