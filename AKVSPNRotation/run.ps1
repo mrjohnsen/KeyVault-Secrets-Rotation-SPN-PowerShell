@@ -5,15 +5,10 @@ function RegenerateCredential($credentialId, $providerAddress){
     
     #Write code to regenerate credential, update your service with new credential and return it
 
-    #EXAMPLE FOR STORAGE
+    $bytes = New-Object Byte[] 32
+    $rand = ([System.Security.Cryptography.RandomNumberGenerator]::Create()).GetBytes($bytes)
+    $newCredentialValue = [System.Convert]::ToBase64String($bytes) | ConvertTo-SecureString -AsPlainText -Force
 
-    <#  
-    $storageAccountName = ($providerAddress -split '/')[8]
-    $resourceGroupName = ($providerAddress -split '/')[4]
-    
-    #Regenerate key 
-    $operationResult = New-AzStorageAccountKey -ResourceGroupName $resourceGroupName -Name $storageAccountName -KeyName $credentialId
-    $newCredentialValue = (Get-AzStorageAccountKey -ResourceGroupName $resourceGroupName -AccountName $storageAccountName|where KeyName -eq $credentialId).value 
     return $newCredentialValue
     
     #>
@@ -66,13 +61,9 @@ function RoatateSecret($keyVaultName,$secretName,$secretVersion){
     Write-Host "Credential Id: $credentialId"
     Write-Host "Provider Address: $providerAddress"
 
-    #Get Credential Id to rotate - alternate credential
-    $alternateCredentialId = GetAlternateCredentialId $credentialId
-    Write-Host "Alternate credential id: $alternateCredentialId"
-
     #Regenerate alternate access credential in provider
-    $newCredentialValue = (RegenerateCredential $alternateCredentialId $providerAddress)
-    Write-Host "Credential regenerated. Credential Id: $alternateCredentialId Resource Id: $providerAddress"
+    $newCredentialValue = (RegenerateCredential $credentialId $providerAddress)
+    Write-Host "Credential regenerated. Credential Id: $credentialId Resource Id: $providerAddress"
 
     #Add new credential to Key Vault
     $newSecretVersionTags = @{}
@@ -81,10 +72,12 @@ function RoatateSecret($keyVaultName,$secretName,$secretVersion){
     $newSecretVersionTags.ProviderAddress = $providerAddress
 
     $expiryDate = (Get-Date).AddDays([int]$validityPeriodDays).ToUniversalTime()
-    $secretvalue = ConvertTo-SecureString "$newCredentialValue" -AsPlainText -Force
+    $secretvalue = $newCredentialValue
     AddSecretToKeyVault $keyVAultName $secretName $secretvalue $expiryDate $newSecretVersionTags
 
     Write-Host "New credential added to Key Vault. Secret Name: $secretName"
+
+    New-AzADAppCredential -ObjectId $credentialId -Password $secretvalue -startDate $(get-date) -EndDate $expiryDate
 }
 $ErrorActionPreference = "Stop"
 # Make sure to pass hashtables to Out-String so they're logged correctly
