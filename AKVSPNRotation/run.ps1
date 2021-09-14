@@ -77,6 +77,8 @@ function RoatateSecret($keyVaultName,$secretName,$secretVersion){
 
     Write-Host "New credential added to Key Vault. Secret Name: $secretName"
 
+    # Reset password in Azure AD App Credential
+    Remove-AzADAppCredential -ObjectId $providerAddress -Force
     New-AzADAppCredential -ObjectId $providerAddress -Password $secretvalue -startDate $(get-date) -EndDate $expiryDate
 }
 $ErrorActionPreference = "Stop"
